@@ -8,6 +8,7 @@ import {
   PackageType,
 } from "../../types.js";
 import {
+  installNextUIComponents,
   installPackages,
   installShadcnUIComponents,
   readConfigFile,
@@ -42,11 +43,14 @@ export const Packages: {
     { name: "Stripe", value: "stripe" },
     { name: "Resend", value: "resend" },
   ],
-  componentLib: [{ name: "Shadcn UI (with next-themes)", value: "shadcn-ui" }],
+  componentLib: [
+    { name: "Shadcn UI (with next-themes)", value: "shadcn-ui" },
+    { name: "Next UI", value: "next-ui" },
+  ],
 };
 
 export const addContextProviderToRootLayout = async (
-  provider: "ThemeProvider"
+  provider: "ThemeProvider" | "NextUIProdiver"
 ) => {
   const { hasSrc, alias } = readConfigFile();
   const path = `${hasSrc ? "src/" : ""}app/layout.tsx`;
@@ -64,6 +68,9 @@ export const addContextProviderToRootLayout = async (
   switch (provider) {
     case "ThemeProvider":
       importStatement = `import { ThemeProvider } from "${alias}/components/ThemeProvider";`;
+      break;
+    case "NextUIProdiver":
+      importStatement = `import { NextUIProvider } from "@nextui-org/react";`;
       break;
   }
 
@@ -333,10 +340,17 @@ const shadCnComponentList: string[] = [];
 export const addToShadcnComponentList = (components: string[]) =>
   shadCnComponentList.push(...components);
 export const installShadcnComponentList = async () => {
-  // consola.start("Installing shadcn components:", shadCnComponentList);
   if (shadCnComponentList.length === 0) return;
   await installShadcnUIComponents(shadCnComponentList);
-  // consola.ready("Successfully installed components.");
+};
+
+const nextUIComponentList: string[] = [];
+export const addToNextUIComponentList = (components: string[]) =>
+  nextUIComponentList.push(...components);
+
+export const installNextUIComponentList = async () => {
+  if (nextUIComponentList.length === 0) return;
+  await installNextUIComponents(nextUIComponentList);
 };
 
 export const printNextSteps = (

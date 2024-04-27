@@ -36,6 +36,7 @@ import { formatTableName, toCamelCase } from "../utils.js";
 import { existsSync, readFileSync } from "fs";
 import { consola } from "consola";
 import { addToShadcnComponentList } from "../../add/utils.js";
+import { eta } from "../../../eta.js";
 
 export const scaffoldViewsAndComponentsWithServerActions = async (
   schema: ExtendedSchema
@@ -78,6 +79,18 @@ export const scaffoldViewsAndComponentsWithServerActions = async (
         { removeExtension: false, prefix: "rootPath" }
       ),
       createListComponent(schema)
+    );
+
+    // create columns
+    createFile(
+      formatFilePath(`app/(app)/${tableNameKebabCase}/columns.tsx`, {
+        prefix: "rootPath",
+        removeExtension: false,
+      }),
+      eta.render("DataTable/columns.eta", {
+        fields: schema.fields,
+        tableNameKebabCase,
+      })
     );
 
     // create components/tableName/TableNameForm.tsx
@@ -174,7 +187,7 @@ const formatRelations = (relations: DBField[]) => {
       tableNameSingularCapitalised,
       tableNameSingular,
     } = formatTableName(relation.references);
-    const hasJoins = queryHasJoins(relation.references);
+    const hasJoins = queryHasJoins();
     const importStatementQueries = `import { get${tableNameCapitalised} } from "${formatFilePath(
       shared.orm.servicesDir.concat(`/${tableNameCamelCase}/queries.ts`),
       { prefix: "alias", removeExtension: true }
@@ -251,7 +264,8 @@ const generateView = (schema: Schema) => {
   const relationsFormatted = formatRelations(relations);
 
   return `import { Suspense } from "react";
-
+import { DataTable } from "${formatFilePath(`components/ui/DataTable`, { prefix: "alias", removeExtension: false })}";
+import { columns } from "./columns";
 import Loading from "${formatFilePath("app/loading", {
     prefix: "alias",
     removeExtension: false,
@@ -313,35 +327,17 @@ const ${tableNameCapitalised} = async () => {
               .join(" ")
           : ""
       } />
+      <DataTable data={${tableNameCamelCase}} columns={columns} />
     </Suspense>
   );
 };
 `;
 };
 
-const queryHasJoins = (tableName: string) => {
-  // const { hasSrc } = readConfigFile();
+const queryHasJoins = () => {
   const { orm } = readConfigFile();
   if (orm === "prisma") return false;
   return false;
-
-  const { shared } = getFilePaths();
-  const { tableNameCamelCase } = formatTableName(tableName);
-
-  const path = `${formatFilePath(shared.orm.servicesDir, {
-    prefix: "rootPath",
-    removeExtension: false,
-  })}/${tableNameCamelCase}/queries.ts`;
-  const queryContent = getFileContents(path);
-
-  const defaultQueriesBoundary = queryContent.indexOf("With");
-  const hasChildren = defaultQueriesBoundary === -1 ? false : true;
-
-  const searchMaterial = hasChildren
-    ? queryContent.slice(0, defaultQueriesBoundary)
-    : queryContent;
-
-  return searchMaterial.includes("Join");
 };
 
 const createListComponent = (schema: ExtendedSchema) => {
@@ -359,7 +355,7 @@ const createListComponent = (schema: ExtendedSchema) => {
   const { shared } = getFilePaths();
   const relations = getRelations(schema.fields);
   const relationsFormatted = formatRelations(relations);
-  const hasJoins = queryHasJoins(schema.tableName);
+  const hasJoins = queryHasJoins();
   const entityName = hasJoins
     ? `${tableNameSingular}.${tableNameSingular}`
     : tableNameSingular;
@@ -469,19 +465,6 @@ export default function ${tableNameSingularCapitalised}List({
           +
         </Button>
       </div>
-      {optimistic${tableNamePluralCapitalised}.length === 0 ? (
-        <EmptyState openModal={openModal} />
-      ) : (
-        <ul>
-          {optimistic${tableNamePluralCapitalised}.map((${tableNameSingular}) => (
-            <${tableNameSingularCapitalised}
-              ${tableNameSingular}={${tableNameSingular}}
-              key={${entityName}.id}
-              openModal={openModal}
-            />
-          ))}
-        </ul>
-      )}
     </div>
   );
 }
@@ -1078,12 +1061,12 @@ const checkUtils = async () => {
   if (!utilTsExists) consola.error("Utils do not exists");
 
   const utilTsContent = readFileSync(utilTsPath, "utf-8");
-  const contentToQuery = `export type Action = "create" | "update" | "delete";
+  const contentToQuery = `export type Action = "create" | "update" | "delete"
 
 export type OptimisticAction<T> = {
   action: Action;
   data: T;
-};
+}
 `;
   if (utilTsContent.includes(contentToQuery)) return;
 
@@ -1195,7 +1178,7 @@ const createOptimisticListHook = (schema: Schema) => {
   } = formatTableName(schema.tableName);
 
   // TODO: This is causing bug
-  const hasJoins = queryHasJoins(schema.tableName);
+  const hasJoins = queryHasJoins();
 
   const { shared } = getFilePaths();
   const relations = getRelations(schema.fields);

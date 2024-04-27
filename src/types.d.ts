@@ -75,10 +75,11 @@ export type AvailablePackage =
   | "lucia"
   | "kinde"
   | "stripe"
-  | "supabase";
+  | "supabase"
+  | "next-ui";
 
 export type PackageType = "orm" | "auth" | "componentLib" | "misc";
-export type ComponentLibType = "shadcn-ui";
+export type ComponentLibType = "shadcn-ui" | "next-ui";
 export type ORMType = "drizzle" | "prisma";
 export type AuthType = "next-auth" | "clerk" | "lucia" | "kinde" | "supabase";
 export type MiscType = "trpc" | "stripe" | "resend";
@@ -136,7 +137,8 @@ export type pgColumnType =
   | "boolean"
   | "references"
   | "timestamp"
-  | "date";
+  | "date"
+  | "uniqueIndex";
 // | "json";
 
 export type mysqlColumnType =
@@ -147,7 +149,8 @@ export type mysqlColumnType =
   | "boolean"
   | "references"
   | "date"
-  | "timestamp";
+  | "timestamp"
+  | "uniqueIndex";
 // | "json";
 
 export type sqliteColumnType =
@@ -156,7 +159,8 @@ export type sqliteColumnType =
   | "boolean"
   | "date"
   | "timestamp"
-  | "references";
+  | "references"
+  | "uniqueIndex";
 // | "blob";
 
 export type PrismaColumnType =

@@ -1,0 +1,23 @@
+"use client";
+
+<% if (it.withShadCn === true) { %> import { Button } from "<%= it.alias + '/components/ui/button' %>"; <% } %>
+import { signOut } from "<%~ it.formatFilePath(it.shared.auth.authActions, {
+    prefix: "alias",
+    removeExtension: true,
+}) %>"
+
+export const SignOutButton = () => {
+    return (
+        <form action={signOut}>
+            <% if (it.withShadCn === true) { %>
+            <Button type="submit" className="bg-red-600 text-foreground">
+                Sign Out
+            </Button>
+            <% } else { %>
+             <button type="submit" className="py-2.5 px-3.5 rounded-md bg-red-500 text-white hover:opacity-80 text-sm">
+                Sign Out
+            </button>
+            <% } %>
+        </form>
+    );
+};

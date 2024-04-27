@@ -5,6 +5,7 @@ import { AvailablePackage, Config, PMType, UpdateConfig } from "./types.js";
 import { execa } from "execa";
 import { spinner } from "./commands/add/index.js";
 import { formatFileContentWithPrettier } from "./commands/init/utils.js";
+import { defaultKirimaseConfigOptions } from "./constants.js";
 
 export const delay = (ms = 2000) =>
   new Promise((resolve) => setTimeout(resolve, ms));
@@ -61,6 +62,7 @@ export async function replaceFile(
 export function createFolder(relativePath: string, log = false) {
   const fullPath = path.join(process.cwd(), relativePath);
   fs.mkdirSync(fullPath, { recursive: true });
+
   if (log) {
     // TODO as above
     // consola.success(`Folder created at ${fullPath}`);
@@ -73,7 +75,7 @@ export const runCommand = async (command: string, args: string[]) => {
     await execa(command, formattedArgs, {
       stdio: "inherit",
     });
-  } catch (error) {
+  } catch (error: any) {
     throw new Error(
       `command "${command} ${formattedArgs
         .join(" ")
@@ -86,9 +88,6 @@ export async function installPackages(
   packages: { regular: string; dev: string },
   pmType: PMType
 ) {
-  const packagesListString = packages.regular.concat(" ").concat(packages.dev);
-  // consola.start(`Installing packages: ${packagesListString}...`);
-
   const installCommand = pmType === "npm" ? "install" : "add";
 
   try {
@@ -106,18 +105,18 @@ export async function installPackages(
         [installCommand, "-D"].concat(packages.dev.split(" "))
       );
     }
-    // consola.success(
-    //   `Regular dependencies installed: \n${packages.regular
-    //     .split(" ")
-    //     .join("\n")}`
-    // );
-    // consola.success(
-    //   `Dev dependencies installed: \n${packages.dev.split(" ").join("\n")}`
-    // );
-  } catch (error) {
+  } catch (error: any) {
     console.error(`An error occurred: ${error.message}`);
   }
 }
+
+export const humanize = (input: string) => {
+  return input
+    .replace(/([A-Z])/g, (match) => ` ${match}`)
+    .replace(/_|-/g, " ")
+    .toLowerCase()
+    .replace(/(?:^|\s)\S/g, (str) => str.toUpperCase());
+};
 
 export const createConfigFile = async (options: Config) => {
   await createFile("./kirimase.config.json", JSON.stringify(options, null, 2));
@@ -133,26 +132,32 @@ export const updateConfigFile = async (options: UpdateConfig) => {
   );
 };
 
-export const readConfigFile = (): (Config & { rootPath: string }) | null => {
-  // Define the path to package.json
+export const readConfigFile = (): Config & { rootPath: string } => {
+  // Define the path to kirmase.config.json
   const configPath = path.join(process.cwd(), "kirimase.config.json");
 
   if (!fs.existsSync(configPath)) {
+    // return {
+    //   ...defaultKirimaseConfigOptions,
+    //   rootPath: defaultKirimaseConfigOptions.hasSrc ? "src/" : "",
+    // };
     return null;
   }
   // Read package.json
   const configJsonData = fs.readFileSync(configPath, "utf-8");
 
   // Parse package.json content
-  let config: Config = JSON.parse(configJsonData);
-
+  const config: Config = JSON.parse(configJsonData);
   const rootPath = config.hasSrc ? "src/" : "";
+
   return { ...config, rootPath };
 };
 
 export const addPackageToConfig = async (packageName: AvailablePackage) => {
   const config = readConfigFile();
-  await updateConfigFile({ packages: [...config?.packages, packageName] });
+  await updateConfigFile({
+    packages: [...(config?.packages ?? []), packageName],
+  });
 };
 
 export const wrapInParenthesis = (string: string) => {
@@ -188,23 +193,51 @@ export async function installShadcnUIComponents(
     preferredPackageManager === "pnpm" ? ["dlx", ...baseArgs] : baseArgs;
 
   if (componentsToInstall.length > 0) {
-    // consola.start(
-    //   `Installing shadcn-ui components: ${componentsToInstall.join(", ")}`
-    // );
     try {
       spinner.stop();
       consola.info("Installing ShadcnUI Components");
       await execa(pmInstallCommand[preferredPackageManager], installArgs, {
         stdio: "inherit",
       });
-      // consola.success(
-      //   `Installed components: ${componentsToInstall.join(", ")}`
-      // );
-    } catch (error) {
+    } catch (error: any) {
       consola.error(`Failed to install components: ${error.message}`);
     }
   } else {
-    // consola.info("All items already installed.");
+    consola.info("All items already installed.");
+  }
+}
+
+export async function installNextUIComponents(
+  components: string[]
+): Promise<void> {
+  const { preferredPackageManager, hasSrc } = readConfigFile();
+  const componentsToInstall: string[] = [];
+
+  for (const component of components) {
+    const tsxFilePath = path.resolve(
+      `${hasSrc ? "src/" : ""}components/ui/${component}.tsx`
+    );
+
+    if (!existsSync(tsxFilePath)) {
+      componentsToInstall.push(component);
+    }
+  }
+  const baseArgs = ["next-ui@latest", "add", ...componentsToInstall];
+  const installArgs =
+    preferredPackageManager === "pnpm" ? ["dlx", ...baseArgs] : baseArgs;
+
+  if (componentsToInstall.length > 0) {
+    try {
+      spinner.stop();
+      consola.info("Installing NextUI Components");
+      await execa(pmInstallCommand[preferredPackageManager], installArgs, {
+        stdio: "inherit",
+      });
+    } catch (error: any) {
+      consola.error(`Failed to install components: ${error.message}`);
+    }
+  } else {
+    consola.info("All items already installed.");
   }
 }
 

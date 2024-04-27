@@ -1,0 +1,70 @@
+"use client";
+
+import { useFormState, useFormStatus } from "react-dom";
+import { redirect } from 'next/navigation';
+<% if (it.withShadCn === true) { %> import { Button } from "<%_ = it.alias _%>/components/ui/button' %>"; <% } %>
+import { type State } from "<%~ it.formatFilePath(it.shared.auth.authActions, {
+    prefix: "alias",
+    removeExtension: true,
+}) %>"
+
+type AuthType = 'sign-in' | 'sign-up'
+type ServerAction = (state: State, formData: FormData) => State | Promise<State>
+
+function AuthForm({
+    action,
+    authType,
+    children
+}: {
+    action: ServerAction
+    authType: AuthType
+    children?: React.ReactNode
+}) {
+    const [state, formAction] = useFormState(action, null)
+
+    if (state?.redirectTo) redirect(state.redirectTo)
+
+    return (
+        <div className='flex-1 flex flex-col w-full px-8 sm:max-w-md justify-center gap-2'>
+            <form
+                className='animate-in flex-1 flex flex-col w-full justify-center gap-2 text-foreground'
+                action={formAction}>
+                {children}
+
+                {state?.error && <span className='text-red-600 my-4'>{state.error}</span>}
+
+                {state?.message && <span className='text-green-600 my-4'>{state.message}</span>}
+
+                <SubmitButton authType={authType} />
+            </form>
+        </div>
+    )
+}
+
+export default AuthForm
+
+const SubmitButton = ({ authType }: { authType: AuthType }) => {
+    const buttonSuffix = authType === 'sign-in' ? 'in' : 'up'
+
+    const { pending } = useFormStatus()
+
+    return (
+        <% if (it.withShadCn === true) { %>
+            <Button
+                type='submit' 
+                className='w-full' 
+                disabled={pending}
+                variant='default'>
+                    Sign{pending ? 'ing' : ''} {buttonSuffix}
+            </Button>
+        <% } else { %>
+             <button
+                type='submit' 
+                className='w-full' 
+                disabled={pending}
+            >
+                Sign{pending ? 'ing' : ''} {buttonSuffix}
+            </button>
+        <% } %>
+    )
+}

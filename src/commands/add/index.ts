@@ -1,7 +1,5 @@
 import { confirm } from "@inquirer/prompts";
 import {
-  createFile,
-  installPackages,
   readConfigFile,
   replaceFile,
   sendEvent,
@@ -54,6 +52,7 @@ import {
 } from "./utils.js";
 import ora from "ora";
 import { checkAndAddAuthUtils } from "./auth/next-auth/utils.js";
+import { installNextUI } from "./componentLib/next-ui/index.js";
 
 const promptUser = async (options?: InitOptions): Promise<InitOptions> => {
   const config = readConfigFile();
@@ -147,17 +146,17 @@ export const addPackage = async (
     if (config.componentLib === undefined) {
       if (promptResponse.componentLib === "shadcn-ui") {
         spinner.text = "Configuring Shadcn-UI";
-        await installShadcnUI([]);
+        await installShadcnUI();
+      }
+      if (promptResponse.componentLib === "next-ui") {
+        spinner.text = "Configuring Next-UI";
+        await installNextUI();
       }
       if (promptResponse.componentLib === null) {
-        // consola.info("Installing Lucide React for icons.");
         spinner.text = "Configuring Base Styles";
 
         addToInstallList({ regular: ["lucide-react"], dev: [] });
-        // await installPackages(
-        //   { regular: "lucide-react", dev: "" },
-        //   config.preferredPackageManager
-        // );
+
         // add to tailwindconfig
         await replaceFile("tailwind.config.ts", generateUpdatedTWConfig());
 
@@ -241,7 +240,7 @@ export const addPackage = async (
       await addTrpc();
     }
     if (promptResponse.miscPackages.includes("shadcn-ui"))
-      await installShadcnUI(promptResponse.miscPackages);
+      await installShadcnUI();
     if (promptResponse.miscPackages.includes("resend")) {
       spinner.text = "Configuring Resend";
       await addResend(promptResponse.miscPackages);
@@ -255,6 +254,7 @@ export const addPackage = async (
       await checkAndAddAuthUtils();
     }
 
+    spinner.text = "Finishing configuration";
     if (init === true) {
       await sendEvent("init_config", {});
     } else {

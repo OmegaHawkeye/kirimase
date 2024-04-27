@@ -2,6 +2,7 @@ import { DBField } from "../../../types.js";
 import pluralize from "pluralize";
 import { createFile, getFileContents, readConfigFile } from "../../../utils.js";
 import { addPackage } from "../../add/index.js";
+import { addToShadcnComponentList } from "../../add/utils.js";
 import { formatFilePath, getFilePaths } from "../../filePaths/index.js";
 import { Schema } from "../types.js";
 import {
@@ -10,13 +11,15 @@ import {
   toCamelCase,
   toNormalEnglish,
 } from "../utils.js";
-import { addToShadcnComponentList } from "../../add/utils.js";
+import { eta } from "../../../eta.js";
+import fs from "fs";
 
 export const scaffoldViewsAndComponents = async (schema: Schema) => {
   const { hasSrc, packages } = readConfigFile();
   const {
     tableNameCamelCase,
     tableNameSingularCapitalised,
+    tableNameSingular,
     tableNameKebabCase,
   } = formatTableName(schema.tableName);
   // require trpc for these views
@@ -26,6 +29,14 @@ export const scaffoldViewsAndComponents = async (schema: Schema) => {
     await createFile(
       rootPath.concat(`app/(app)/${tableNameKebabCase}/page.tsx`),
       generateView(schema)
+    );
+    // create tableName/[id]/page.tsx
+    createFile(
+      formatFilePath(
+        `app/(app)/${tableNameKebabCase}/[${tableNameSingular}Id]/page.tsx`,
+        { removeExtension: false, prefix: "rootPath" }
+      ),
+      createShowPage(schema)
     );
     // create components/tableName/TableNameList.tsx
     await createFile(
@@ -40,6 +51,14 @@ export const scaffoldViewsAndComponents = async (schema: Schema) => {
         `components/${tableNameCamelCase}/${tableNameSingularCapitalised}Form.tsx`
       ),
       createFormComponent(schema)
+    );
+    // create components/tableName/columns.tsx
+    createFile(
+      rootPath.concat(`components/${tableNameCamelCase}/columns.tsx`),
+      eta.render("DataTable/columns.eta", {
+        fields: schema.fields,
+        tableNameKebabCase,
+      })
     );
     // create components/tableName/TableNameModal.tsx
     await createFile(
@@ -67,7 +86,6 @@ export const scaffoldViewsAndComponents = async (schema: Schema) => {
       ? baseComponents.push("popover", "calendar")
       : null;
     addToShadcnComponentList(baseComponents);
-    // await installShadcnUIComponents(baseComponents);
   } else {
     addPackage();
   }
@@ -96,6 +114,8 @@ import { api } from "${formatFilePath(trpc.trpcApiTs, {
         })}";`
       : ""
   }
+import { DataTable } from "${alias}/components/ui/DataTable";
+import { columns } from "${alias}/components/${tableNameCamelCase}/columns";
 
 export default async function ${tableNameCapitalised}() {
   ${
@@ -108,11 +128,44 @@ export default async function ${tableNameCapitalised}() {
         <h1 className="font-semibold text-2xl my-2">${tableNameNormalEnglishCapitalised}</h1>
         <New${tableNameSingularCapitalised}Modal />
       </div>
-      <${tableNameSingularCapitalised}List ${tableNameCamelCase}={${tableNameCamelCase}} />
+      <DataTable data={${tableNameCamelCase}} columns={columns} />
     </main>
   );
 }
 `;
+};
+
+const createShowPage = (schema: Schema) => {
+  const {
+    tableNameCamelCase,
+    tableNameSingularCapitalised,
+    tableNameKebabCase,
+    tableNameSingular,
+    tableNameNormalEnglishCapitalised,
+  } = formatTableName(schema.tableName);
+  const { trpc } = getFilePaths();
+  const { alias, hasSrc } = readConfigFile();
+  const trpcRoute = formatFilePath(trpc.trpcApiTs, {
+    prefix: "alias",
+    removeExtension: true,
+  });
+  const { fields } = schema;
+  if (
+    !fs.existsSync(`${hasSrc ? "src/" : ""}compononents/ui/breadcrumbs.tsx`)
+  ) {
+    addToShadcnComponentList(["breadcrumbs"]);
+  }
+
+  return eta.render("resources/show.eta", {
+    fields,
+    tableNameSingular,
+    tableNameSingularCapitalised,
+    tableNameCamelCase,
+    tableNameKebabCase,
+    tableNameNormalEnglishCapitalised,
+    alias,
+    trpcRoute,
+  });
 };
 
 const queryHasJoins = (tableName: string) => {

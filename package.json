@@ -1,6 +1,6 @@
 {
   "name": "kirimase",
-  "version": "0.0.56-beta.0",
+  "version": "0.0.57",
   "description": "A Rails-like CLI for building full-stack Next.js apps faster",
   "main": "index.js",
   "type": "module",
@@ -8,10 +8,12 @@
     "kirimase": "./dist/index.js"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "npx tsc",
-    "dev2": "node dist/index.js",
-    "dev": "tsc -w"
+    "build": "tsc && tscp",
+    "watch:ts": "tsc -w",
+    "watch:templates": "tscp -w",
+    "reinstall": "bun run build && npm i -g .",
+    "createTesterApp": "rm -rf tester/ && bunx create-next-app tester && cd tester/ && kirimase init",
+    "dev": "npm-run-all --parallel watch:ts watch:templates"
   },
   "keywords": [
     "cli",
@@ -25,11 +27,12 @@
   "author": "Nico Albanese",
   "license": "ISC",
   "dependencies": {
-    "@inquirer/checkbox": "^1.3.6",
-    "@inquirer/prompts": "^3.0.1",
+    "@inquirer/checkbox": "^1.5.2",
+    "@inquirer/prompts": "^3.3.2",
     "chalk": "^5.3.0",
-    "commander": "^11.0.0",
+    "commander": "^12.0.0",
     "consola": "^3.2.3",
+    "eta": "^3.4.0",
     "execa": "^8.0.1",
     "figlet": "^1.7.0",
     "ora": "^8.0.1",
@@ -37,11 +40,15 @@
     "strip-json-comments": "^5.0.1"
   },
   "devDependencies": {
-    "@types/node": "^20.4.5",
-    "@typescript-eslint/eslint-plugin": "^6.6.0",
-    "@typescript-eslint/parser": "^6.6.0",
-    "eslint": "^8.48.0",
+    "@types/figlet": "^1.5.8",
+    "@types/node": "^20.11.24",
+    "@types/pluralize": "^0.0.33",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "eslint": "^8.57.0",
+    "npm-run-all": "^4.1.5",
     "prettier": "^3.2.5",
-    "typescript": "^5.1.6"
+    "typescript": "^5.4.5",
+    "typescript-cp": "^0.1.9"
   }
 }
