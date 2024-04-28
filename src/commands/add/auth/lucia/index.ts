@@ -88,13 +88,21 @@ export const addLucia = async () => {
     rootPath.concat("app/loading.tsx"),
     viewsAndComponents.loadingPage
   );
-
   await createFile(
     formatFilePath(lucia.signOutButtonComponent, {
       removeExtension: false,
       prefix: "rootPath",
     }),
     viewsAndComponents.updatedSignOutButton
+  );
+
+  // add server actions
+  await createFile(
+    formatFilePath(lucia.usersActions, {
+      removeExtension: false,
+      prefix: "rootPath",
+    }),
+    generateUserServerActions()
   );
 
   const authDirFiles = generateAuthDirFiles(orm, driver, provider);

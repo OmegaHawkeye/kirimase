@@ -35,6 +35,14 @@ import { scaffoldViewsAndComponentsWithServerActions } from "./generators/views-
 import { addLinkToNavbar } from "./generators/model/views-shared.js";
 import { installShadcnComponentList } from "../add/utils.js";
 
+type Choice<Value> = {
+  name?: string;
+  value: Value;
+  disabled?: boolean | string;
+  checked?: boolean;
+  type?: never;
+};
+
 function provideInstructions() {
   consola.info(
     "Quickly generate your Model (schema + queries / mutations), Controllers (API Routes and TRPC Routes), and Views"
@@ -135,8 +143,8 @@ async function askForResourceType() {
           disabled: !packages.includes("trpc")
             ? "[You need to have tRPC installed. Run 'kirimase add']"
             : viewRequested === "views_and_components_trpc"
-              ? "[Already generated with your selected view]"
-              : false,
+            ? "[Already generated with your selected view]"
+            : false,
         },
       ].filter((item) =>
         viewRequested ? !viewRequested.includes(item.value.split("_")[0]) : item

@@ -1,4 +1,3 @@
-import { warn } from "console";
 import { existsSync, readFileSync } from "fs";
 import { createFile, replaceFile } from "../../../../utils.js";
 import { formatFilePath, getFilePaths } from "../../../filePaths/index.js";
@@ -161,8 +160,9 @@ export const createAppLayoutFile = async () => {
   if (!layoutExists) await createFile(layoutPath, defaultAppLayout);
 };
 
-const defaultAuthLayout = (authUtils: string) => `
-import { getUserAuth } from "${formatFilePath(authUtils, {
+const defaultAuthLayout = (
+  authUtils: string
+) => `import { getUserAuth } from "${formatFilePath(authUtils, {
   removeExtension: true,
   prefix: "alias",
 })}";
@@ -208,7 +208,6 @@ import { getUserAuth } from "${formatFilePath(shared.auth.authUtils, {
 
 export default async function LandingPage() {
   const { session } = await getUserAuth();
-
   return (
     <div className="flex flex-col min-h-screen">
       <header className="px-4 lg:px-6 h-14 flex items-center">

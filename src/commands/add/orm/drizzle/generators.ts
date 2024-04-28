@@ -16,7 +16,6 @@ import {
 import stripJsonComments from "strip-json-comments";
 import { addToInstallList } from "../../utils.js";
 import { formatFileContentWithPrettier } from "../../../init/utils.js";
-import { consola } from "consola";
 
 const configDriverMappings = {
   postgresjs: "pg",
