@@ -17,91 +17,6 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? "", {
 `;
 };
 
-export const generateStripeSubscriptionTsOld = () => {
-  const { orm } = readConfigFile();
-  const { stripe, shared } = getFilePaths();
-  const dbIndex = getDbIndexPath();
-  let userSelect: string;
-  switch (orm) {
-    case "drizzle":
-      userSelect = `db.select().from(users).where(eq( users.id, session.user.id ))`;
-      break;
-    case "prisma":
-      userSelect = `db.user.findFirst({
-    where: {
-      id: session.user.id,
-    },
-  });`;
-  }
-
-  return `import { storeSubscriptionPlans } from "${formatFilePath(
-    stripe.configSubscription,
-    { prefix: "alias", removeExtension: true }
-  )}";
-import { db } from "${formatFilePath(dbIndex, {
-    prefix: "alias",
-    removeExtension: true,
-  })}";${
-    orm === "drizzle"
-      ? `\nimport { users } from "${formatFilePath(shared.auth.authSchema, {
-          prefix: "alias",
-          removeExtension: true,
-        })}";\nimport { eq } from "drizzle-orm";`
-      : ""
-  }
-import { stripe } from "${formatFilePath(stripe.stripeIndex, {
-    prefix: "alias",
-    removeExtension: true,
-  })}";
-import { getUserAuth } from "${formatFilePath(shared.auth.authUtils, {
-    prefix: "alias",
-    removeExtension: true,
-  })}";
-
-export async function getUserSubscriptionPlan() {
-  const { session } = await getUserAuth();
-
-  if (!session || !session.user) {
-    throw new Error("User not found.");
-  }
-
-  const ${orm === "drizzle" ? "[user]" : "user"} = await ${userSelect}
-
-  if (!user) {
-    throw new Error("User not found.");
-  }
-
-  const isSubscribed =
-    user.stripePriceId &&
-    user.stripeCurrentPeriodEnd &&
-    user.stripeCurrentPeriodEnd.getTime() + 86_400_000 > Date.now();
-
-  const plan = isSubscribed
-    ? storeSubscriptionPlans.find(
-        (plan) => plan.stripePriceId === user.stripePriceId
-      )
-    : null;
-
-  let isCanceled = false;
-  if (isSubscribed && user.stripeSubscriptionId) {
-    const stripePlan = await stripe.subscriptions.retrieve(
-      user.stripeSubscriptionId
-    );
-    isCanceled = stripePlan.cancel_at_period_end;
-  }
-
-  return {
-    ...plan,
-    stripeSubscriptionId: user.stripeSubscriptionId,
-    stripeCurrentPeriodEnd: user.stripeCurrentPeriodEnd,
-    stripeCustomerId: user.stripeCustomerId,
-    isSubscribed,
-    isCanceled,
-  };
-}
-`;
-};
-
 export const generateConfigSubscriptionsTs = () => {
   return `export interface SubscriptionPlan {
   id: string;
@@ -750,132 +665,6 @@ export default async function Billing() {
   }
 };
 
-export const generateStripeWebhookOld = () => {
-  const { orm } = readConfigFile();
-  const { shared, stripe } = getFilePaths();
-  const dbIndex = getDbIndexPath();
-
-  let dbCalls = { one: "", two: "", three: "" };
-
-  switch (orm) {
-    case "drizzle":
-      dbCalls.one = `db.update(users).set(updatedData).where(eq(users.id, session.metadata.userId))`;
-      dbCalls.two = `db.update(users).set(updatedData).where(eq(users.stripeCustomerId, session.customer))`;
-      dbCalls.three = `db.update(users).set({
-        stripePriceId: subscription.items.data[0].price.id,
-        stripeCurrentPeriodEnd: new Date(
-          subscription.current_period_end * 1000
-        )
-      }).where(eq(users.stripeSubscriptionId, subscription.id))`;
-      break;
-    case "prisma":
-      dbCalls.one = `db.user.update({
-        where: { id: session.metadata.userId },
-        data: updatedData,
-      });`;
-      dbCalls.two = `db.user.update({
-        where: { stripeCustomerId: session.customer },
-        data: updatedData,
-      });`;
-      dbCalls.three = `db.user.update({
-      where: {
-        stripeSubscriptionId: subscription.id,
-      },
-      data: {
-        stripePriceId: subscription.items.data[0].price.id,
-        stripeCurrentPeriodEnd: new Date(
-          subscription.current_period_end * 1000
-        ),
-      },
-    });`;
-      break;
-  }
-
-  return `import { db } from "${formatFilePath(dbIndex, {
-    prefix: "alias",
-    removeExtension: true,
-  })}";
-import { stripe } from "${formatFilePath(stripe.stripeIndex, {
-    prefix: "alias",
-    removeExtension: true,
-  })}";
-import { headers } from "next/headers";
-import type Stripe from "stripe";${
-    orm === "drizzle"
-      ? `\nimport { users } from "${formatFilePath(shared.auth.authSchema, {
-          prefix: "alias",
-          removeExtension: true,
-        })}";\nimport { eq } from "drizzle-orm";`
-      : ""
-  }
-
-export async function POST(request: Request) {
-  const body = await request.text();
-  const signature = headers().get("Stripe-Signature") ?? "";
-
-  let event: Stripe.Event;
-
-  try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET || ""
-    );
-    console.log(event.type);
-  } catch (err) {
-    return new Response(
-      \`Webhook Error: \${err instanceof Error ? err.message : "Unknown Error"}\`,
-      { status: 400 }
-    );
-  }
-
-  const session = event.data.object as Stripe.Checkout.Session;
-  // console.log("this is the session metadata -> ", session);
-
-  if (!session?.metadata?.userId && session.customer == null) {
-    console.error("session customer", session.customer);
-    console.error("no metadata for userid");
-    return new Response(null, {
-      status: 200,
-    });
-  }
-
-  if (event.type === "checkout.session.completed") {
-    const subscription = await stripe.subscriptions.retrieve(
-      session.subscription as string
-    );
-    const updatedData = {
-      stripeSubscriptionId: subscription.id,
-      stripeCustomerId: subscription.customer as string,
-      stripePriceId: subscription.items.data[0].price.id,
-      stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
-    };
-
-    if (session?.metadata?.userId != null) {
-      await ${dbCalls.one}
-    } else if (
-      typeof session.customer === "string" &&
-      session.customer != null
-    ) {
-      await ${dbCalls.two}
-    }
-  }
-
-  if (event.type === "invoice.payment_succeeded") {
-    // Retrieve the subscription details from Stripe.
-    const subscription = await stripe.subscriptions.retrieve(
-      session.subscription as string
-    );
-
-    // Update the price id and set the new period end.
-    await ${dbCalls.three}
-  }
-
-  return new Response(null, { status: 200 });
-}
-`;
-};
-
 export const generateManageSubscriptionRoute = () => {
   const { stripe, shared } = getFilePaths();
   return `import { stripe } from "${formatFilePath(stripe.stripeIndex, {
@@ -1042,7 +831,7 @@ export const subscriptions = sqliteTable(
 
 export const generateStripeWebhook = () => {
   const { orm } = readConfigFile();
-  const { shared, stripe } = getFilePaths();
+  const { stripe } = getFilePaths();
   const dbIndex = getDbIndexPath();
 
   let dbCalls = { one: "", two: "", three: "" };
@@ -1291,7 +1080,6 @@ export async function getUserSubscriptionPlan() {
 };
 
 export const createAccountTRPCRouter = () => {
-  const { alias } = readConfigFile();
   const { stripe, trpc, shared } = getFilePaths();
   const { createRouterInvokcation } = getFileLocations();
   return `import { getUserAuth } from "${formatFilePath(shared.auth.authUtils, {

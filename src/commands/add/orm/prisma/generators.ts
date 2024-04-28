@@ -19,13 +19,13 @@ generator client {
 }
 
 generator zod {
-  provider              = "zod-prisma"
-  output                = "./zod" 
-  relationModel         = true 
-  modelCase             = "camelCase" 
-  modelSuffix           = "Schema" 
-  useDecimalJs          = true 
-  prismaJsonNullability = true 
+  provider                  = "zod-prisma-types"
+  output                    = "./zod" 
+  createRelationValuesTypes = true
+  // modelCase             = "camelCase" 
+  // modelSuffix           = "Schema" 
+  // useDecimalJs          = true 
+  writeNullishInModelTypes  = true
 }
 
 datasource db {

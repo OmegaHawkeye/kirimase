@@ -193,14 +193,22 @@ export const createAuthLayoutFile = async () => {
     await createFile(layoutPath, defaultAuthLayout(shared.auth.authUtils));
 };
 
-const landingPage = `/**
+const landingPage = () => {
+  const { shared } = getFilePaths();
+  return `/**
  * v0 by Vercel.
  * @see https://v0.dev/t/PmwTvNfrVgf
  * Documentation: https://v0.dev/docs#integrating-generated-code-into-your-nextjs-app
  */
 import Link from "next/link";
+import { getUserAuth } from "${formatFilePath(shared.auth.authUtils, {
+    removeExtension: true,
+    prefix: "alias",
+  })}";
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const { session } = await getUserAuth();
+
   return (
     <div className="flex flex-col min-h-screen">
       <header className="px-4 lg:px-6 h-14 flex items-center">
@@ -217,9 +225,9 @@ export default function LandingPage() {
           </Link>
           <Link
             className="text-sm font-medium hover:underline underline-offset-4"
-            href="/sign-in"
+            href={session ? '/dashboard' : '/sign-in'}
           >
-            Sign In
+            {session ? 'Dashboard' : 'Sign In'}
           </Link>
         </nav>
       </header>
@@ -377,6 +385,7 @@ function MountainIcon(props: any) {
   );
 }
 `;
+};
 
 export const createLandingPage = async () => {
   // need to make a check here to not replace things
@@ -388,5 +397,5 @@ export const createLandingPage = async () => {
   const alreadyUpdated =
     lpContent.indexOf("v0 by Vercel") === -1 ? false : true;
 
-  if (alreadyUpdated === false) await replaceFile(rootPath, landingPage);
+  if (alreadyUpdated === false) await replaceFile(rootPath, landingPage());
 };

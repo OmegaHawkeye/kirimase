@@ -74,22 +74,21 @@ export const checkTimestampsInUtils = async () => {
   const timestampsContent = `export const timestamps: { createdAt: true; updatedAt: true } = {
   createdAt: true,
   updatedAt: true,
-};
-`;
+}`;
+
   const { shared } = getFilePaths();
   const utilsPath = formatFilePath(shared.init.libUtils, {
     removeExtension: false,
     prefix: "rootPath",
   });
+
   const utilsExists = existsSync(utilsPath);
   if (!utilsExists) {
     await createFile(utilsPath, timestampsContent);
   } else {
     const utilsContent = readFileSync(utilsPath, "utf-8");
     if (utilsContent.indexOf(timestampsContent) === -1) {
-      const newContent = `${utilsContent}
-  ${timestampsContent}
-  `;
+      const newContent = `${utilsContent}${timestampsContent}`;
       await replaceFile(utilsPath, newContent);
     }
   }

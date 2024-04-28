@@ -81,9 +81,9 @@ export const addNextAuth = async (
         }),
         createDrizzleAuthSchema(driver)
       );
-      if (t3) {
-        await updateRootSchema("auth", true, "next-auth");
-      }
+      // if (t3) {
+      await updateRootSchema("auth", true, "next-auth");
+      // }
     }
     if (orm === "prisma") {
       await addToPrismaSchema(

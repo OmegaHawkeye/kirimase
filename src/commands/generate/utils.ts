@@ -12,7 +12,6 @@ import { consola } from "consola";
 import { formatFilePath, getFilePaths } from "../filePaths/index.js";
 import { Schema } from "./types.js";
 
-import chalk from "chalk";
 import { TResource } from "./index.js";
 import { createNextStepsList, createNotesList } from "../add/utils.js";
 

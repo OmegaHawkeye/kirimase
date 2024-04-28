@@ -16,9 +16,7 @@ import {
 import stripJsonComments from "strip-json-comments";
 import { addToInstallList } from "../../utils.js";
 import { formatFileContentWithPrettier } from "../../../init/utils.js";
-// import consola from "consola";
-
-type ConfigDriver = "pg" | "turso" | "libsql" | "mysql" | "better-sqlite";
+import { consola } from "consola";
 
 const configDriverMappings = {
   postgresjs: "pg",
@@ -76,154 +74,20 @@ export const createIndexTs = async (dbProvider: DBProvider) => {
       init: { envMjs },
     },
   } = getFilePaths();
+
   const dbIndex = getDbIndexPath("drizzle");
-  let indexTS = "";
-  switch (dbProvider) {
-    case "postgresjs":
-      indexTS = `import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
-import { env } from "${formatFilePath(envMjs, {
-        removeExtension: false,
-        prefix: "alias",
-      })}";
 
-export const client = postgres(env.DATABASE_URL);
-export const db = drizzle(client);`;
-      break;
-    case "node-postgres":
-      indexTS = `import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool } from "pg"
-import { env } from "${formatFilePath(envMjs, {
-        removeExtension: false,
-        prefix: "alias",
-      })}";
+  const { imports, connectionLogic } =
+    getDbImportAndConnectionLogic(dbProvider);
 
-export const pool = new Pool({
-  connectionString: env.DATABASE_URL,
-});
-export const db = drizzle(pool);`;
-      break;
-    case "neon":
-      indexTS = `import { neon, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-http';
-import { env } from "${formatFilePath(envMjs, {
-        removeExtension: false,
-        prefix: "alias",
-      })}";
-
-neonConfig.fetchConnectionCache = true;
- 
-export const sql = neon(env.DATABASE_URL);
-export const db = drizzle(sql);
+  const indexTS = `
+  import { env } from "${formatFilePath(envMjs, {
+    removeExtension: false,
+    prefix: "alias",
+  })}";
+  ${imports}
+  ${connectionLogic}
 `;
-      break;
-    case "vercel-pg":
-      indexTS = `import { sql } from '@vercel/postgres';
-import { drizzle } from 'drizzle-orm/vercel-postgres';
-import { env } from "${formatFilePath(envMjs, {
-        removeExtension: false,
-        prefix: "alias",
-      })}";
- 
-export const db = drizzle(sql)
-`;
-      break;
-    case "supabase":
-      indexTS = `import { drizzle } from 'drizzle-orm/postgres-js'
-import postgres from 'postgres'
-import { env } from "${formatFilePath(envMjs, {
-        removeExtension: false,
-        prefix: "alias",
-      })}";
- 
-const connectionString = env.DATABASE_URL
-const client = postgres(connectionString)
-export const db = drizzle(client);
-`;
-      break;
-    case "aws":
-      indexTS = `import { drizzle } from 'drizzle-orm/aws-data-api/pg';
-import { RDSDataClient } from '@aws-sdk/client-rds-data';
-import { fromIni } from '@aws-sdk/credential-providers';
-import "dotenv/config";
-
- 
-const rdsClient = new RDSDataClient({
-  	credentials: fromIni({ profile: env['PROFILE'] }),
-		region: 'us-east-1',
-});
- 
-export const db = drizzle(rdsClient, {
-  database: env['DATABASE']!,
-  secretArn: env['SECRET_ARN']!,
-  resourceArn: env['RESOURCE_ARN']!,
-});
-`;
-      break;
-    case "planetscale":
-      indexTS = `import { drizzle } from "drizzle-orm/planetscale-serverless";
-import { connect } from "@planetscale/database";
-import { env } from "${formatFilePath(envMjs, {
-        removeExtension: false,
-        prefix: "alias",
-      })}";
- 
-// create the connection
-export const connection = connect({
-  url: env.DATABASE_URL
-});
- 
-export const db = drizzle(connection);
-`;
-      break;
-    case "mysql-2":
-      indexTS = `import { drizzle } from "drizzle-orm/mysql2";
-import mysql from "mysql2/promise";
-import { env } from "${formatFilePath(envMjs, {
-        removeExtension: false,
-        prefix: "alias",
-      })}";
- 
-export const poolConnection = mysql.createPool(env.DATABASE_URL);
- 
-export const db = drizzle(poolConnection);
-`;
-      break;
-    case "better-sqlite3":
-      indexTS = `import { drizzle, BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import Database from 'better-sqlite3';
- 
-export const sqlite = new Database('sqlite.db');
-export const db: BetterSQLite3Database = drizzle(sqlite);
-`;
-      break;
-    case "turso":
-      indexTS = `import { drizzle } from 'drizzle-orm/libsql';
-import { createClient } from "@libsql/client";
-import { env } from "${formatFilePath(envMjs, {
-        removeExtension: false,
-        prefix: "alias",
-      })}";
- 
-export const sqlite = createClient({
-  url: env.DATABASE_URL,
-  authToken: env.DATABASE_AUTH_TOKEN,
-});
-
-export const db = drizzle(sqlite);
-`;
-      break;
-    // case "bun-sqlite":
-    //   indexTS = `import { drizzle, BunSQLiteDatabase } from 'drizzle-orm/bun-sqlite';
-    // import { Database } from 'bun:sqlite';
-    //
-    // const sqlite = new Database('sqlite.db');
-    // export const db: BunSQLiteDatabase = drizzle(sqlite);
-    // `;
-    //   break;
-    default:
-      break;
-  }
 
   await createFile(
     formatFilePath(dbIndex, { prefix: "rootPath", removeExtension: false }),
@@ -231,161 +95,19 @@ export const db = drizzle(sqlite);
   );
 };
 
-export const createMigrateTs = async (
-  libPath: string,
-  dbType: DBType,
-  dbProvider: DBProvider
-) => {
+export const createMigrateTs = async (dbProvider: DBProvider) => {
   const {
     drizzle: { dbMigrate, migrationsDir },
     shared: {
       init: { envMjs },
     },
   } = getFilePaths();
-  let imports = "";
-  let connectionLogic = "";
 
-  switch (dbProvider) {
-    //done
-    case "postgresjs":
-      imports = `
-import { drizzle } from "drizzle-orm/postgres-js";
-import { migrate } from "drizzle-orm/postgres-js/migrator";
-import postgres from "postgres";
-`;
-      connectionLogic = `
-const connection = postgres(env.DATABASE_URL, { max: 1 });
+  const { imports, connectionLogic } = getDbImportAndConnectionLogic(
+    dbProvider,
+    true
+  );
 
-const db = drizzle(connection);
-`;
-      break;
-    //done
-    case "node-postgres":
-      imports = `
-import { drizzle } from "drizzle-orm/node-postgres";
-import { migrate } from "drizzle-orm/node-postgres/migrator";
-import { Client } from "pg";
-`;
-      connectionLogic = `
-const client = new Client({
-  connectionString: env.DATABASE_URL,
-});
-
-await client.connect();
-const db = drizzle(client);
-`;
-      break;
-    //done
-    case "neon":
-      imports = `
-import { drizzle } from "drizzle-orm/neon-http";
-import { migrate } from "drizzle-orm/neon-http/migrator";
-import { neon, neonConfig } from '@neondatabase/serverless';
-`;
-      connectionLogic = `
-neonConfig.fetchConnectionCache = true;
- 
-const sql = neon(env.DATABASE_URL);
-const db = drizzle(sql);
-`;
-      break;
-    case "vercel-pg":
-      imports = `
-import { drizzle } from "drizzle-orm/vercel-postgres";
-import { migrate } from "drizzle-orm/vercel-postgres/migrator";
-import { sql } from '@vercel/postgres';
-`;
-      connectionLogic = `
-  const db = drizzle(sql);
-`;
-      break;
-    //done
-    case "supabase":
-      imports = `
-import { drizzle } from "drizzle-orm/postgres-js";
-import { migrate } from "drizzle-orm/postgres-js/migrator";
-import postgres from "postgres";
-`;
-      connectionLogic = `
-  const connection = postgres(env.DATABASE_URL, { max: 1 });
-
-  const db = drizzle(connection);
-`;
-      break;
-    // done
-    case "aws":
-      imports = `
-import { drizzle } from 'drizzle-orm/aws-data-api/pg';
-import { migrate } from "drizzle-orm/aws-data-api/pg/migrator";
-import { RDSDataClient } from '@aws-sdk/client-rds-data';
-import { fromIni } from '@aws-sdk/credential-providers';
-`;
-      connectionLogic = `
-const rdsClient = new RDSDataClient({
-  	credentials: fromIni({ profile: process.env['PROFILE'] }),
-		region: 'us-east-1',
-});
- 
-const db = drizzle(rdsClient, {
-  database: process.env['DATABASE']!,
-  secretArn: process.env['SECRET_ARN']!,
-  resourceArn: process.env['RESOURCE_ARN']!,
-});
-`;
-      break;
-    // done
-    case "planetscale":
-      imports = `
-import { drizzle } from "drizzle-orm/planetscale-serverless";
-import { migrate } from "drizzle-orm/planetscale-serverless/migrator";
-import { connect } from "@planetscale/database";
-`;
-      connectionLogic = `
-const connection = connect({ url: env.DATABASE_URL });
- 
-const db = drizzle(connection);
-`;
-      break;
-    case "mysql-2":
-      imports = `
-import { drizzle } from "drizzle-orm/mysql2";
-import { migrate } from "drizzle-orm/mysql2/migrator";
-import mysql from "mysql2/promise";
-`;
-      connectionLogic = `
-  const connection = await mysql.createConnection(env.DATABASE_URL);
-
-  const db = drizzle(connection);
-`;
-      break;
-    case "better-sqlite3":
-      imports = `
-import { BetterSQLite3Database, drizzle } from "drizzle-orm/better-sqlite3";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
-import Database from 'better-sqlite3';
-`;
-      connectionLogic = `
-const sqlite = new Database('sqlite.db');
-const db: BetterSQLite3Database = drizzle(sqlite);
-`;
-      break;
-    case "turso":
-      imports = `
-import { createClient } from "@libsql/client";
-import { drizzle } from "drizzle-orm/libsql";
-import { migrate } from "drizzle-orm/libsql/migrator";
-`;
-      connectionLogic = `
-  const client = createClient({
-    url: env.DATABASE_URL,
-    authToken: env.DATABASE_AUTH_TOKEN,
-  });
-  const db = drizzle(client);
-`;
-      break;
-    default:
-      break;
-  }
   const template = `import { env } from "${formatFilePath(envMjs, {
     removeExtension: false,
     prefix: "alias",
@@ -425,6 +147,156 @@ runMigrate().catch((err) => {
     formatFilePath(dbMigrate, { prefix: "rootPath", removeExtension: false }),
     template
   );
+};
+
+const getDbImportAndConnectionLogic = (
+  dbProvider: DBProvider,
+  includeMigrator = false
+) => {
+  let imports = "";
+  let connectionLogic = "";
+
+  switch (dbProvider) {
+    case "postgresjs":
+      imports = `
+import { drizzle } from "drizzle-orm/postgres-js";
+${includeMigrator ? `import { migrate } from "drizzle-orm/postgres-js/migrator";` : ""}
+import postgres from "postgres";
+`;
+      connectionLogic = `
+const conn = postgres(env.DATABASE_URL, { max: 1 });
+
+const db = drizzle(conn);
+`;
+      break;
+    case "node-postgres":
+      imports = `
+import { drizzle } from "drizzle-orm/node-postgres";
+${includeMigrator ? `import { migrate } from "drizzle-orm/node-postgres/migrator";` : ""}
+import { Client } from "pg";
+`;
+      connectionLogic = `
+const conn = new Client({
+  connectionString: env.DATABASE_URL,
+});
+
+await conn.connect();
+const db = drizzle(conn);
+`;
+      break;
+    case "neon":
+      imports = `
+import { drizzle } from "drizzle-orm/neon-http";
+${includeMigrator ? `import { migrate } from "drizzle-orm/neon-http/migrator";` : ""}
+import { neon, neonConfig, NeonQueryFunction } from '@neondatabase/serverless';
+`;
+      connectionLogic = `
+neonConfig.fetchConnectionCache = true;
+ 
+const conn: NeonQueryFunction<boolean, boolean> = neon(env.DATABASE_URL);
+const db = drizzle(conn);
+`;
+      break;
+    case "vercel-pg":
+      imports = `
+import { drizzle } from "drizzle-orm/vercel-postgres";
+${includeMigrator ? `import { migrate } from "drizzle-orm/vercel-postgres/migrator";` : ""}
+import { conn } from '@vercel/postgres';
+`;
+      connectionLogic = `
+  const db = drizzle(conn);
+`;
+      break;
+    case "supabase":
+      imports = `
+import { drizzle } from "drizzle-orm/postgres-js";
+${includeMigrator ? `import { migrate } from "drizzle-orm/postgres-js/migrator";` : ""}
+import postgres from "postgres";
+`;
+      connectionLogic = `
+  const conn = postgres(env.DATABASE_URL, { max: 1 });
+
+  const db = drizzle(conn);
+`;
+      break;
+    //     case "aws":
+    //       imports = `
+    // import { drizzle } from 'drizzle-orm/aws-data-api/pg';
+    // ${includeMigrator ? `import { migrate } from "drizzle-orm/aws-data-api/pg/migrator";`: ""}
+    // import { RDSDataClient } from '@aws-sdk/client-rds-data';
+    // import { fromIni } from '@aws-sdk/credential-providers';
+    // `;
+    //       connectionLogic = `
+    // const conn = new RDSDataClient({
+    //   	credentials: fromIni({ profile: env['PROFILE'] }),
+    // 		region: 'us-east-1',
+    // });
+
+    // const db = drizzle(conn, {
+    //   database: env['DATABASE']!,
+    //   secretArn: env['SECRET_ARN']!,
+    //   resourceArn: env['RESOURCE_ARN']!,
+    // });
+    // `;
+    //       break;
+    case "planetscale":
+      imports = `
+import { drizzle } from "drizzle-orm/planetscale-serverless";
+${includeMigrator ? `import { migrate } from "drizzle-orm/planetscale-serverless/migrator";` : ""}
+import { connect } from "@planetscale/database";`;
+      connectionLogic = `
+const conn = connect({ url: env.DATABASE_URL });
+ 
+const db = drizzle(conn);
+`;
+      break;
+    case "mysql-2":
+      imports = `
+import { drizzle } from "drizzle-orm/mysql2";
+${includeMigrator ? `import { migrate } from "drizzle-orm/mysql2/migrator";` : ""}
+import mysql from "mysql2/promise";
+`;
+      connectionLogic = `
+  const conn = await mysql.createConnection(env.DATABASE_URL);
+  const db = drizzle(conn);
+`;
+      break;
+    case "better-sqlite3":
+      imports = `
+import { type BetterSQLite3Database, drizzle } from "drizzle-orm/better-sqlite3";
+${includeMigrator ? `import { migrate } from "drizzle-orm/better-sqlite3/migrator";` : ""}
+import Database from 'better-sqlite3';`;
+      connectionLogic = `
+const conn = new Database('sqlite.db');
+const db: BetterSQLite3Database = drizzle(conn);
+`;
+      break;
+    case "turso":
+      imports = `
+import { createClient } from "@libsql/client";
+import { drizzle } from 'drizzle-orm/libsql';
+${includeMigrator ? `import { migrate } from "drizzle-orm/libsql/migrator";` : ""}`;
+      connectionLogic = `
+  const conn = createClient({
+    url: env.DATABASE_URL,
+    authToken: env.DATABASE_AUTH_TOKEN,
+  });
+  const db = drizzle(conn);
+`;
+      break;
+    // case "bun-sqlite":
+    //   imports = `import { drizzle, BunSQLiteDatabase } from 'drizzle-orm/bun-sqlite';
+    //  import { Database } from 'bun:sqlite'; `;
+
+    //   connectionLogic = `
+    //  const conn = new Database('sqlite.db');
+    //  export const db: BunSQLiteDatabase = drizzle(conn);
+    //  `;
+    //   break;
+    default:
+      break;
+  }
+  return { imports, connectionLogic };
 };
 
 export const createInitSchema = async (libPath?: string, dbType?: DBType) => {
@@ -537,7 +409,7 @@ export const addScriptsToPackageJson = async (
     "db:migrate": `tsx ${libPath}/db/migrate.ts`,
     "db:drop": "drizzle-kit drop",
     "db:pull": `drizzle-kit introspect:${driver}`,
-    ...(driver !== "pg" ? { "db:push": `drizzle-kit push:${driver}` } : {}),
+    "db:push": `drizzle-kit push:${driver}`,
     "db:studio": "drizzle-kit studio",
     "db:check": `drizzle-kit check:${driver}`,
   };

@@ -9,16 +9,16 @@ import {
   ORMType,
   PrismaColumnType,
 } from "../../types.js";
-import { Choice } from "@inquirer/checkbox";
 import { createOrmMappings } from "./generators/model/utils.js";
 import { scaffoldAPIRoute } from "./generators/apiRoute.js";
 import {
+  getFromPackageJson,
   readConfigFile,
   sendEvent,
   updateConfigFileAfterUpdate,
 } from "../../utils.js";
 import { scaffoldTRPCRoute } from "./generators/trpcRoute.js";
-import { addPackage, spinner } from "../add/index.js";
+import { addPackage } from "../add/index.js";
 import { initProject } from "../init/index.js";
 import { ExtendedSchema, Schema } from "./types.js";
 import { scaffoldViewsAndComponents } from "./generators/views.js";
@@ -32,7 +32,7 @@ import {
 import { scaffoldModel } from "./generators/model/index.js";
 import { scaffoldServerActions } from "./generators/serverActions.js";
 import { scaffoldViewsAndComponentsWithServerActions } from "./generators/views-with-server-actions.js";
-import { addLinkToSidebar } from "./generators/model/views-shared.js";
+import { addLinkToNavbar } from "./generators/model/views-shared.js";
 import { installShadcnComponentList } from "../add/utils.js";
 
 function provideInstructions() {
@@ -53,46 +53,6 @@ type TResourceGroup = "model" | "controller" | "view";
 
 async function askForResourceType() {
   const { packages, orm } = readConfigFile();
-
-  //   const resourcesRequested = (await checkbox({
-  //     message: "Please select the resources you would like to generate:",
-  //     choices: [
-  //       {
-  //         name: "Model",
-  //         value: "model",
-  //         disabled:
-  //           orm === null
-  //             ? "[You need to have an orm installed. Run 'kirimase add']"
-  //             : false,
-  //       },
-  //       { name: "API Route", value: "api_route" },
-  //       {
-  //         name: "TRPC Route",
-  //         value: "trpc_route",
-  //         disabled: !packages.includes("trpc")
-  //           ? "[You need to have trpc installed. Run 'kirimase add']"
-  //           : false,
-  //       },
-  //       {
-  //         name: "Views + Components (with Shadcn UI, requires TRPC route)",
-  //         value: "views_and_components_trpc",
-  //         disabled:
-  //           !packages.includes("shadcn-ui") || !packages.includes("trpc")
-  //             ? "[You need to have shadcn-ui and trpc installed. Run 'kirimase add']"
-  //             : false,
-  //       },
-  //       {
-  //         name: "Server Actions",
-  //         value: "server_actions",
-  //       },
-  //       {
-  //         name: "Views + Components (with server actions)",
-  //         value: "views_and_components_server_actions",
-  //       },
-  //     ],
-  //   })) as TResource[];
-  //   return resourcesRequested;
-  // }
 
   let resourcesRequested: TResource[] = [];
   let viewRequested: TResource;
@@ -191,22 +151,66 @@ async function askForResourceType() {
 }
 
 async function askForTable() {
-  const tableName = await input({
+  return await input({
     message: "Please enter the table name (plural and in snake_case):",
     validate: (input) =>
       input.match(/^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/)
         ? true
         : "Table name must be in snake_case if more than one word, and plural.",
   });
-  return tableName;
+}
+
+async function askForTablePrefix(): Promise<string | null> {
+  const tablePrefixChoices = [
+    {
+      name: "Yes",
+      value: "yes",
+    },
+    {
+      name: "Take the project name as the table prefix",
+      value: "projectName",
+    },
+    {
+      name: "No",
+      value: "no",
+    },
+  ] as const;
+
+  const tablePrefixChoice = await select({
+    message: "Please select the type of this field:",
+    choices: tablePrefixChoices,
+  });
+
+  if (tablePrefixChoice === "projectName") {
+    const projectName = getFromPackageJson("name");
+
+    return projectName !== null
+      ? projectName
+      : await input({
+          message: "Please enter the table prefix (in snake_case):",
+          validate: (input) =>
+            input.match(/^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/)
+              ? true
+              : "Table prefix must be in snake_case if more than one word.",
+        });
+  }
+
+  return tablePrefixChoice === "yes"
+    ? await input({
+        message: "Please enter the table prefix (in snake_case):",
+        validate: (input) =>
+          input.match(/^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/)
+            ? true
+            : "Table prefix must be in snake_case if more than one word.",
+      })
+    : null;
 }
 
 async function askIfBelongsToUser() {
-  const belongsToUser = await confirm({
+  return await confirm({
     message: "Does this model belong to the user?",
     default: true,
   });
-  return belongsToUser;
 }
 
 async function askForFields(orm: ORMType, dbType: DBType, tableName: string) {
@@ -306,7 +310,7 @@ async function askForIndex(fields: DBField[]) {
         return {
           name: field.name,
           value: field.name,
-        } as Choice<string>;
+        };
       }),
     });
     return fieldToIndex;
@@ -344,6 +348,7 @@ export async function preBuild() {
 
 async function promptUserForSchema(config: Config, resourceType: TResource[]) {
   const tableName = await askForTable();
+  const tablePrefix = await askForTablePrefix();
   const fields = await askForFields(config.orm, config.driver, tableName);
   const indexedField = await askForIndex(fields);
   const includeTimestamps = await askForTimestamps();
@@ -353,6 +358,7 @@ async function promptUserForSchema(config: Config, resourceType: TResource[]) {
   }
   return {
     tableName,
+    tablePrefix,
     fields,
     index: indexedField,
     belongsToUser,
@@ -476,15 +482,14 @@ async function generateResources(
       resourceType.includes("views_and_components_server_actions")) &&
     !config.t3
   ) {
-    const addToSidebar = await confirm({
-      message: `Would you like to add a link to '${tnEnglish}' in your sidebar?`,
+    const addToNavbar = await confirm({
+      message: `Would you like to add a link to '${tnEnglish}' in your navbar?`,
       default: true,
     });
-    if (addToSidebar) await addLinkToSidebar(schema.tableName);
+    if (addToNavbar) await addLinkToNavbar(schema.tableName);
   }
 
-  if (resourceType.includes("model"))
-    scaffoldModel(schema, config.driver, config.hasSrc);
+  if (resourceType.includes("model")) scaffoldModel(schema, config.driver);
   if (resourceType.includes("api_route")) await scaffoldAPIRoute(schema);
   if (resourceType.includes("trpc_route")) await scaffoldTRPCRoute(schema);
   if (resourceType.includes("views_and_components_trpc"))
@@ -509,7 +514,6 @@ export async function buildSchema() {
     // would want to have something that formatted the schema object into:
     // an array of items that needed to be created using code commented below
     // would also need extra stuff like urls
-    // TODO
 
     const schemas = formatSchemaForGeneration(schema);
 

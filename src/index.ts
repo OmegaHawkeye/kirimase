@@ -7,7 +7,7 @@ import { addPackage } from "./commands/add/index.js";
 import { toggleAnalytics } from "./commands/init/utils.js";
 
 const program = new Command();
-program.name("kirimase").description("Kirimase CLI").version("0.0.56");
+program.name("kirimase").description("Kirimase CLI").version("0.0.57");
 
 program
   .command("analytics")
@@ -15,11 +15,13 @@ program
   .action(toggleAnalytics);
 
 addCommonOptions(program.command("init"))
+  .alias("i")
   .description("initialise and configure kirimase within a directory")
   .action(initProject);
 
 program
   .command("generate")
+  .alias("g")
   .description("Generate a new resource")
   .action(buildSchema);
 

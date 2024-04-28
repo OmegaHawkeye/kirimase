@@ -285,3 +285,9 @@ export const sendEvent = async (
     return;
   }
 };
+
+export const getFromPackageJson = (key: string): string | null => {
+  const packageJsonPath = path.resolve(process.cwd(), "package.json");
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
+  return key in packageJson ? packageJson[key] : null;
+};

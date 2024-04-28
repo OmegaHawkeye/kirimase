@@ -27,26 +27,26 @@ export const generateDbUrl = (dbType: DBType, provider?: DBProvider) => {
 };
 
 export const prismaGenerate = async (packageManager: PMType) => {
-  // consola.start(
-  //   `Running Prisma generate command to generate zod-prisma types.`
-  // );
+  consola.start(
+    `Running Prisma generate command to generate types with zod-prisma-types.`
+  );
   try {
     await execa(pmInstallCommand[packageManager], ["prisma", "generate"], {
       stdio: "ignore",
     });
-    // consola.success(`Successfully generated zod-prisma types`);
-  } catch (error) {
+    consola.success(`Successfully generated types with zod-prisma-types.`);
+  } catch (error: any) {
     consola.error(`Failed to run Prisma generate: ${error.message}`);
   }
 };
 
 export const prismaFormat = async (packageManager: PMType) => {
-  // consola.start(`Running Prisma format.`);
+  consola.start(`Running Prisma format.`);
   try {
     await execa(pmInstallCommand[packageManager], ["prisma", "format"], {
       stdio: "ignore",
     });
-  } catch (error) {
+  } catch (error: any) {
     consola.error(`Failed to run Prisma format: ${error.message}`);
   }
 };
@@ -73,5 +73,7 @@ export async function updateTsConfigPrismaTypeAlias() {
 
   // Write the updated content back to the file
   await replaceFile(tsConfigPath, updatedContent);
-  // consola.success("Updated tsconfig.json to support zod-prisma type alias.");
+  consola.success(
+    "Updated tsconfig.json to support zod-prisma-types type aliases."
+  );
 }

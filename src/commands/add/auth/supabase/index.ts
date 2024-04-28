@@ -24,7 +24,7 @@ import { formatFilePath, getFilePaths } from "../../../filePaths/index.js";
 import { addToInstallList } from "../../utils.js";
 import { addToDotEnv } from "../../orm/drizzle/generators.js";
 export const addSupabase = async () => {
-  const { orm, rootPath, componentLib } = readConfigFile();
+  const { rootPath, componentLib } = readConfigFile();
   const { supabase, shared } = getFilePaths();
 
   const {

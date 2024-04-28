@@ -11,7 +11,6 @@ import { authForWhereClausePrisma, generateAuthCheck } from "../utils.js";
 
 const generateDrizzleImports = (schema: Schema) => {
   const { tableName, belongsToUser } = schema;
-  const { orm } = readConfigFile();
   const {
     tableNameSingularCapitalised,
     tableNameCamelCase,

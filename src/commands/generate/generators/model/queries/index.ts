@@ -1,5 +1,5 @@
 import { ORMType } from "../../../../../types.js";
-import { ExtendedSchema, Schema } from "../../../types.js";
+import { ExtendedSchema } from "../../../types.js";
 import { generateQueries } from "./generators.js";
 
 export const generateQueryContent = (schema: ExtendedSchema, orm: ORMType) => {

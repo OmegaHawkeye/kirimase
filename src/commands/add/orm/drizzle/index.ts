@@ -1,11 +1,9 @@
-import { confirm, select } from "@inquirer/prompts";
 import { DBProvider, DBType, InitOptions } from "../../../../types.js";
 import {
   addPackageToConfig,
   createFolder,
   readConfigFile,
   updateConfigFile,
-  wrapInParenthesis,
 } from "../../../../utils.js";
 import {
   addScriptsToPackageJson,
@@ -57,7 +55,7 @@ export const addDrizzle = async (
 
   // dependent on dbtype and driver, create
   await createIndexTs(dbProvider);
-  await createMigrateTs(libPath, dbType, dbProvider);
+  await createMigrateTs(dbProvider);
   await createDrizzleConfig(libPath, dbProvider);
 
   // perhaps using push rather than migrate for sqlite?

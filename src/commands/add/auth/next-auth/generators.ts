@@ -550,12 +550,8 @@ export const protectedProcedure = t.procedure.use(enforceUserIsAuthed);
 
   fs.writeFileSync(
     filePath,
-    await formatFileContentWithPrettier(modifiedRouterContent,filePath)
+    await formatFileContentWithPrettier(modifiedRouterContent, filePath)
   );
-
-  // consola.success(
-  //   "TRPC Router updated successfully to add protectedProcedure."
-  // );
 };
 
 export const enableSessionInContext = async () => {
@@ -570,29 +566,8 @@ export const enableSessionInContext = async () => {
 
   fs.writeFileSync(
     filePath,
-    await formatFileContentWithPrettier(updatedContent,filePath)
+    await formatFileContentWithPrettier(updatedContent, filePath)
   );
-
-  // consola.success("TRPC Context updated successfully to add Session data.");
-};
-
-// no longer necessary
-export const enableSessionInTRPCApi_DEPRECATED = async () => {
-  const { trpc } = getFilePaths();
-  const filePath = formatFilePath(trpc.trpcApiTs, {
-    prefix: "rootPath",
-    removeExtension: false,
-  });
-
-  const fileContent = fs.readFileSync(filePath, "utf-8");
-  const updatedContent = fileContent.replace(/\/\//g, "");
-
-  fs.writeFileSync(
-    filePath,
-    await formatFileContentWithPrettier(updatedContent,filePath)
-  );
-
-  // consola.success("TRPC Server API updated successfully to add Session data.");
 };
 
 export const createPrismaAuthSchema = (

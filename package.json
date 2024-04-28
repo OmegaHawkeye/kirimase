@@ -8,10 +8,11 @@
     "kirimase": "./dist/index.js"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "build": "npx tsc",
     "dev2": "node dist/index.js",
-    "dev": "tsc -w"
+    "dev": "tsc -w",
+    "reinstall": "bun run build && npm i -g .",
+    "createTesterApp": "rm -rf tester/ && bunx create-next-app@latest tester && cd tester/ && kirimase init"
   },
   "keywords": [
     "cli",

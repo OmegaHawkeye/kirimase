@@ -136,7 +136,8 @@ export type pgColumnType =
   | "boolean"
   | "references"
   | "timestamp"
-  | "date";
+  | "date"
+  | "uniqueIndex";
 // | "json";
 
 export type mysqlColumnType =
@@ -147,7 +148,8 @@ export type mysqlColumnType =
   | "boolean"
   | "references"
   | "date"
-  | "timestamp";
+  | "timestamp"
+  | "uniqueIndex";
 // | "json";
 
 export type sqliteColumnType =
@@ -156,7 +158,8 @@ export type sqliteColumnType =
   | "boolean"
   | "date"
   | "timestamp"
-  | "references";
+  | "references"
+  | "uniqueIndex";
 // | "blob";
 
 export type PrismaColumnType =

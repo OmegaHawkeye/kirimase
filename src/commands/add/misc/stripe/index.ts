@@ -65,6 +65,7 @@ export const addStripe = async (packagesBeingInstalled: AvailablePackage[]) => {
   const { stripe, shared } = getFilePaths();
 
   const packages = packagesBeingInstalled.concat(installedPackages);
+  // const authSubtype = auth != null ? AuthSubTypeMapping[ auth ] : null;
   const authSubtype = AuthSubTypeMapping[auth];
 
   if (orm === null || orm === undefined || driver === undefined) {
@@ -73,6 +74,7 @@ export const addStripe = async (packagesBeingInstalled: AvailablePackage[]) => {
     await addPackage();
     return;
   }
+
   if (t3 && auth === "next-auth") {
     const authUtilsPath = formatFilePath(shared.auth.authUtils, {
       prefix: "rootPath",
@@ -125,9 +127,9 @@ export const addStripe = async (packagesBeingInstalled: AvailablePackage[]) => {
       }),
       generateSubscriptionsDrizzleSchema(driver, auth)
     );
-    if (t3) {
-      await updateRootSchema("subscriptions");
-    }
+    // if (t3) {
+    await updateRootSchema("subscriptions");
+    // }
   }
 
   // create stripe/index file
@@ -230,12 +232,8 @@ export const addStripe = async (packagesBeingInstalled: AvailablePackage[]) => {
 
   // misc script updates
   await addListenScriptToPackageJson();
-  // install packages
-  // await installPackages(
-  //   { dev: "", regular: "stripe @stripe/stripe-js lucide-react" },
-  //   preferredPackageManager
-  // );
 
+  // install packages
   addToInstallList({
     regular: ["stripe", "@stripe/stripe-js", "lucide-react"],
     dev: [],

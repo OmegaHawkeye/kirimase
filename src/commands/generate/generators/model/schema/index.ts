@@ -79,7 +79,10 @@ const generateImportStatement = (
     if (schema.includeTimestamps)
       usedTypes.push(generateTimestampFieldsDrizzle().importType);
 
+    if (schema.index) usedTypes.push("uniqueIndex");
+
     const uniqueTypes = getUniqueTypes(usedTypes, belongsToUser, dbType);
+
     return `${
       schema.includeTimestamps ? `import { sql } from "drizzle-orm";\n` : ""
     }import { ${uniqueTypes
@@ -182,7 +185,7 @@ const generateDrizzleSchema = (
   zodSchemas: string,
   authType: AuthType
 ) => {
-  const { tableName, fields } = schema;
+  const { tableName, fields, tablePrefix } = schema;
   const { tableNameCamelCase } = formatTableName(tableName);
 
   const importStatement = generateImportStatement(
@@ -197,9 +200,20 @@ const generateDrizzleSchema = (
   const userGeneratedFields = generateFieldsForSchema(fields, mappings);
   const indexFormatted = generateIndex(schema);
 
-  const drizzleSchemaContent = `export const ${tableNameCamelCase} = ${
-    mappings.tableFunc
-  }('${tableName}', {
+  const tableCreatorFunc = mappings.tableFunc;
+
+  const drizzleSchemaContent = `
+  /**
+ * This is an example of how to use the multi-project schema feature of Drizzle ORM. Use the same
+ * database instance for multiple projects.
+ *
+ * @see https://orm.drizzle.team/docs/goodies#multi-project-schema
+ */
+  // const createTable = ${tablePrefix ? `${tableCreatorFunc}((name) => "${tablePrefix}_"name)` : `${tableCreatorFunc}((t) => t)`};
+
+ const createTable = ${tablePrefix ? `${tableCreatorFunc}((name) => \`${tablePrefix}_\${name}\`)` : `${tableCreatorFunc}((name) => name)`};
+
+  export const ${tableNameCamelCase} = createTable('${tableName}', {
   id: ${mappings.typeMappings["id"]({ name: "id" })},
 ${userGeneratedFields}${addUserReferenceIfBelongsToUser(
     schema,
@@ -211,7 +225,7 @@ ${userGeneratedFields}${addUserReferenceIfBelongsToUser(
       : ""
   }
 }${indexFormatted});\n`;
-  // TODO TODO: ADD TIMESTAMPS HERE BETWEEN INDEX FORMATTED AND END CURLY
+  // TODO: ADD TIMESTAMPS HERE BETWEEN INDEX FORMATTED AND END CURLY
   return `${importStatement}\n\n${drizzleSchemaContent}\n\n${zodSchemas}`;
 };
 

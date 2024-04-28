@@ -7,10 +7,9 @@ import {
   createUserSettingsComponent,
   createUpdateNameCard,
   createUpdateEmailCard,
-  // createNavbar,
   createSignOutBtn,
 } from "./generators.js";
-import { AuthType, ORMType } from "../../../../types.js";
+import { AuthType } from "../../../../types.js";
 import { formatFilePath, getFilePaths } from "../../../filePaths/index.js";
 import {
   enableSessionInContext,
@@ -23,7 +22,7 @@ export const createAccountSettingsPage = async () => {
   const withShadCn = componentLib === "shadcn-ui" ? true : false;
 
   // create account api - clerk has managed components so no need - supabase has its own client to update user details
-  if (auth !== "supabase" && auth !== "clerk") {
+  if (auth !== "supabase" && auth !== "clerk" && auth !== "lucia") {
     await createFile(
       formatFilePath(shared.auth.accountApiRoute, {
         prefix: "rootPath",
@@ -67,7 +66,7 @@ export const scaffoldAccountSettingsUI = async (
       prefix: "rootPath",
       removeExtension: false,
     }),
-    createUpdateNameCard(withShadCn, auth !== "lucia")
+    createUpdateNameCard(withShadCn, auth !== "lucia", auth === "lucia")
   );
 
   // create updatenamecard
@@ -76,7 +75,7 @@ export const scaffoldAccountSettingsUI = async (
       prefix: "rootPath",
       removeExtension: false,
     }),
-    createUpdateEmailCard(withShadCn, auth !== "lucia")
+    createUpdateEmailCard(withShadCn, auth !== "lucia", auth === "lucia")
   );
 
   // create accountcard components
@@ -88,17 +87,9 @@ export const scaffoldAccountSettingsUI = async (
     createAccountCardComponent(withShadCn)
   );
 
-  // create navbar component
-  // await createFile(
-  //   formatFilePath(shared.init.navbarComponent, {
-  //     prefix: "rootPath",
-  //     removeExtension: false,
-  //   }),
-  //   createNavbar(withShadCn, auth === "clerk", auth)
-  // );
-
-  if (withShadCn && auth !== "supabase") {
-    await createFile(
+  // TODO FIX THIS
+  if (withShadCn && auth !== "lucia" && auth !== "supabase") {
+    createFile(
       formatFilePath(lucia.signOutButtonComponent, {
         prefix: "rootPath",
         removeExtension: false,
@@ -106,11 +97,7 @@ export const scaffoldAccountSettingsUI = async (
       createSignOutBtn()
     );
   }
-  // add navbar to root layout
-  // addContextProviderToLayout("Navbar");
   if (withShadCn) {
-    // consola.start("Installing Card component for account page...");
-    // await installShadcnUIComponents(["card"]);
     addToShadcnComponentList(["card"]);
   }
 };

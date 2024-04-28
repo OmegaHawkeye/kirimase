@@ -4,7 +4,7 @@ export type Paths = {
     migrationsDir: string;
     dbIndex: string;
     schemaTs?: string;
-    schemaAggregator?: string;
+    schemaAggregator: string;
   };
   prisma: { dbIndex: string };
   shared: {
@@ -33,7 +33,7 @@ export type Paths = {
       updateEmailCardComponent: string;
       accountCardComponent: string;
       layoutPage: string;
-      authSchema?: string;
+      authSchema: string | null;
     };
   };
   "next-auth": {
@@ -50,13 +50,10 @@ export type Paths = {
   lucia: {
     signInPage: string;
     signUpPage: string;
-    authFormComponent: string;
-    signInApiRoute: string;
-    signUpApiRoute: string;
-    signOutApiRoute: string;
-    appDTs: string;
+    usersActions: string;
     libAuthLucia: string;
     signOutButtonComponent: string;
+    formErrorComponent: string;
   };
   supabase: {
     signInPage: string;

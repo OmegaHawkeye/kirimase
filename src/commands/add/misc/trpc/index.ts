@@ -103,16 +103,7 @@ export const addTrpc = async () => {
   );
 
   // 8. Install Packages: @tanstack/react-query (5.0 causing known issue, downgrading for now TODO), @trpc/client, @trpc/react-query, @trpc/server
-  // await installPackages(
-  //   {
-  //     regular: `@tanstack/react-query@^4.32.6 @trpc/client@^10.37.1 @trpc/react-query@^10.37.1 @trpc/server@^10.37.1 @trpc/next@^10.37.1 superjson server-only${
-  //       orm === null ? " zod" : ""
-  //     }`,
-  //     dev: "",
-  //   },
-  //   preferredPackageManager
-  // );
-
+  // TODO: Check again on the known issues in the lastest version of tanstack/react-query
   addToInstallList({
     regular: [
       "@tanstack/react-query@^4.32.6",
@@ -128,23 +119,6 @@ export const addTrpc = async () => {
   if (orm === null) addToInstallList({ regular: ["zod"], dev: [] });
 
   await addPackageToConfig("trpc");
-  // 9. Instruct user to add the <Provider /> to their root layout.
+  // 9. Add the <Provider /> to their root layout.
   await addContextProviderToAppLayout("TrpcProvider");
-  // await addToDotEnv(
-  //   [
-  //     {
-  //       key: "VERCEL_URL",
-  //       value: "https://your-project-url.vercel.app",
-  //       // value: "",
-  //       isUrl: true,
-  //       customZodImplementation: "z.string().url().optional()",
-  //     },
-  //   ],
-  //   hasSrc ? "src/" : ""
-  // );
-
-  // consola.success("Successfully added trpc to your project!");
-  // consola.warn(
-  //   "Please add the <Provider> to your root layout, by wrapping it around your children"
-  // );
 };

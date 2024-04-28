@@ -1,8 +1,4 @@
-import {
-  existsSync,
-  readFileSync,
-  // writeFileSync
-} from "fs";
+import { existsSync, readFileSync } from "fs";
 import {
   AvailablePackage,
   Config,
@@ -34,11 +30,11 @@ export const DBProviders: DBProviderOptions = {
     { name: "Neon", value: "neon" },
     { name: "Vercel Postgres", value: "vercel-pg" },
     { name: "Supabase", value: "supabase" },
-    {
-      name: "AWS Data API",
-      value: "aws",
-      disabled: "(Not supported)",
-    },
+    // {
+    //   name: "AWS Data API",
+    //   value: "aws",
+    //   disabled: "(Not supported)",
+    // },
   ],
   mysql: [
     { name: "PlanetScale", value: "planetscale" },
@@ -54,7 +50,6 @@ export const DBProviders: DBProviderOptions = {
 export const checkForExistingPackages = async (rootPath: string) => {
   consola.start("Checking project for existing packages...");
   // get package json
-  // const { preferredPackageManager } = readConfigFile();
   const packageJsonInitText = readFileSync("package.json", "utf-8");
 
   let configObj: Partial<Config> = {
@@ -93,7 +88,6 @@ export const checkForExistingPackages = async (rootPath: string) => {
   };
   const dependenciesStringified = JSON.stringify(allDependencies);
   for (const [key, terms] of Object.entries(packages)) {
-    // console.log(key, terms);
     if (!terms) continue;
 
     // Loop over each term in the array
@@ -103,10 +97,6 @@ export const checkForExistingPackages = async (rootPath: string) => {
       if (dependenciesStringified.includes(term)) {
         // set object
         existsInProject = true;
-        // if (packageTypeMappings[key] !== null) {
-        //   configObj[packageTypeMappings[key]] = key;
-        //   configObj.packages.push(key as AvailablePackage);
-        // }
       }
     }
     if (existsInProject && packageTypeMappings[key] !== null)
@@ -198,33 +188,17 @@ export const checkForExistingPackages = async (rootPath: string) => {
 
   if (configObj.t3 === true) {
     if (configObj.orm === "prisma") {
-      // add zod generator to schema to schema.prisma
-      // consola.start(
-      //   "Installing zod-prisma for use with Kirimase's generate function."
-      // );
-      addToInstallList({ regular: [], dev: ["zod-prisma"] });
-      // await installPackages(
-      //   { regular: "", dev: "zod-prisma" },
-      //   preferredPackageManager,
-      // );
+      addToInstallList({ regular: [], dev: ["zod-prisma-types"] });
+
       await addZodGeneratorToPrismaSchema();
-      // consola.success("Successfully installed!");
 
       await updateTsConfigPrismaTypeAlias();
     } else if (configObj.orm === "drizzle") {
-      // consola.start(
-      //   "Installing drizzle-zod for use with Kirimase's generate function."
-      // );
-      // await installPackages(
-      //   { regular: "drizzle-zod", dev: "" },
-      //   preferredPackageManager
-      // );
       addToInstallList({ regular: ["drizzle-zod", "nanoid"], dev: [] });
+
       await addNanoidToUtils();
-      // consola.success("Successfully installed!");
     }
   }
-  // if (drizzle), check if using one schema file or schema directory - perhaps just force users?
 
   // update config file
   await updateConfigFile(configObj);
@@ -238,15 +212,15 @@ const addZodGeneratorToPrismaSchema = async () => {
   }
   const schema = readFileSync("prisma/schema.prisma", "utf-8");
   const newSchema = schema.concat(`
-generator zod {
-  provider              = "zod-prisma"
-  output                = "./zod"
-  relationModel         = true
-  modelCase             = "camelCase"
-  modelSuffix           = "Schema"
-  useDecimalJs          = true
-  prismaJsonNullability = true
-}
+    generator zod {
+      provider                  = "zod-prisma-types"
+      output                    = "./zod" 
+      createRelationValuesTypes = true
+      // modelCase             = "camelCase" 
+      // modelSuffix           = "Schema" 
+      // useDecimalJs          = true 
+      writeNullishInModelTypes  = true
+    }
 `);
 
   await replaceFile("prisma/schema.prisma", newSchema);
@@ -267,6 +241,16 @@ export const checkForPackageManager = (): PMType | null => {
 
 export const createPrettierConfigFileIfNotExist = async () => {
   const userPrettierConfigPath = await resolveConfigFile();
+
+  if (!userPrettierConfigPath) {
+    consola.info(
+      "Prettier config not found! Create default prettier config for further usage..."
+    );
+
+    await createDefaultPrettierConfig();
+
+    return;
+  }
 
   // Throws an error if there is an error during parsing the users prettier config file
   let prettierConfig = await resolvePrettierConfig(userPrettierConfigPath);
@@ -294,8 +278,10 @@ export const formatFileContentWithPrettier = async (
 
   const prettierConfigPath = await resolveConfigFile();
 
+  if (!prettierConfigPath) return content;
+
   // Throws an error if there is an error during parsing the users prettier config file
-  let prettierConfig = await resolvePrettierConfig(prettierConfigPath);
+  const prettierConfig = await resolvePrettierConfig(prettierConfigPath);
 
   if (
     prettierConfig &&
@@ -304,7 +290,7 @@ export const formatFileContentWithPrettier = async (
   )
     prettierConfig.filepath = filePath;
 
-  return await prettierFormat(content, prettierConfig);
+  return await prettierFormat(content, prettierConfig ?? undefined);
 };
 
 const createDefaultPrettierConfig = async () => {
@@ -335,4 +321,21 @@ export const toggleAnalytics = (input: { toggle?: boolean }) => {
       `Anonymous analytics are currently ${analytics ? "on" : "off"}`
     );
   }
+};
+
+const nextConfigPathOptions = [
+  "next.config.js",
+  "next.config.cjs",
+  "next.config.mjs",
+  "next.config.ts",
+] as const;
+
+export const hasNextConfigFile = () => {
+  for (const nextConfigPath of nextConfigPathOptions) {
+    if (existsSync(nextConfigPath)) {
+      return true;
+    }
+  }
+
+  return false;
 };

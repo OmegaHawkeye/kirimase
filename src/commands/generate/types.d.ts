@@ -3,6 +3,7 @@ import { ReferenceType } from "./utils.ts";
 
 export type Schema = {
   tableName: string;
+  tablePrefix?: string;
   fields: DBField[];
   index: string;
   belongsToUser?: boolean;
