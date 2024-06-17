@@ -2,15 +2,20 @@ import { ComponentLibType } from "../../../../types.js";
 import { formatFilePath, getFilePaths } from "../../../filePaths/index.js";
 
 const generateMiddlewareTs = () => {
-  return `import { authMiddleware } from "@clerk/nextjs";
+  return `import { clerkMiddleware } from "@clerk/nextjs/server";
 
 // This example protects all routes including api/trpc routes
 // Please edit this to allow other routes to be public as needed.
 // See https://clerk.com/docs/references/nextjs/auth-middleware for more information about configuring your middleware
-export default authMiddleware({ ignoredRoutes: ["/"] });
+export default clerkMiddleware();
 
 export const config = {
-  matcher: ['/((?!.+\\\\\.[\\\\\w]+$|_next).*)', '/', '/(api|trpc)(.*)'],
+  matcher: [
+    '/((?!.*\\..*|_next).*)', // Exclude static assets and _next routes
+    '/api/webhooks/stripe', // Exclude /api/webhooks/stripe route
+    '/api/:path*', // Include all other /api routes
+    '/:path*', // Include all other routes
+  ],
 };`;
 };
 const generateSignInPageTs = () => {
